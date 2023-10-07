@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>countdown timer</title>
+    <style>
+      body,html{
+        background: #000;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #c{
+        background:#000;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <script>
+      hours   = 0
+      minutes = 0
+      seconds = 6
+      if(location.href.indexOf('time=')!==-1){
+        let s = location.href.split('time=')[1]
+        s = s.split('&')[0].split(':')
+        if(s.length==3) [hours, minutes, seconds] = s
+      }
+
+      c = document.querySelector('#c')
+      c.width = 1920
+      c.height = 400
+      x = c.getContext('2d')
+      C = Math.cos
+      S = Math.sin
+      t = 0
+      T = Math.tan
+
+      rsz=window.onresize=()=>{
+        setTimeout(()=>{
+          if(document.body.clientWidth > document.body.clientHeight/(c.height/c.width)){
+            c.style.height = '100vh'
+            setTimeout(()=>c.style.width = c.clientHeight/(c.height/c.width)+'px',0)
+          }else{
+            c.style.width = '100vw'
+            setTimeout(()=>c.style.height = c.clientWidth*(c.height/c.width) + 'px',0)
+          }
+        },0)
+      }
+      rsz()
+
+      async function Draw(){
+        oX=oY=oZ=0
+        if(!t){
+          R=R2=(Rl,Pt,Yw,m)=>{
+            M=Math
+            A=M.atan2
+            H=M.hypot
+            X=S(p=A(X,Z)+Yw)*(d=H(X,Z))
+            Z=C(p)*d
+            Y=S(p=A(Y,Z)+Pt)*(d=H(Y,Z))
+            Z=C(p)*d
+            X=S(p=A(X,Y)+Rl)*(d=H(X,Y))
+            Y=C(p)*d
+            if(m){
+              X+=oX
+              Y+=oY
+              Z+=oZ
+            }
+          }
+          Q=()=>[c.width/2+X/Z*1400,c.height/2+Y/Z*1400]
+          Rn = Math.random
+
+          Cylinder = (rw,cl,ls1,ls2) => {
+            let a = []
+            for(let i=rw;i--;){
+              let b = []
+              for(let j=cl;j--;){
+                X = S(p=Math.PI*2/cl*j) * ls1
+                Y = (1/rw*i-.5)*ls2
+                Z = C(p) * ls1
+                b = [...b, [X,Y,Z]]
+              }
+              //a = [...a, b]
+              for(let j=cl;j--;){
+                b = []
+                X = S(p=Math.PI*2/cl*j) * ls1
+                Y = (1/rw*i-.5)*ls2
+                Z = C(p) * ls1
+                b = [...b, [X,Y,Z]]
+                X = S(p=Math.PI*2/cl*(j+1)) * ls1
+                Y = (1/rw*i-.5)*ls2
+                Z = C(p) * ls1
+                b = [...b, [X,Y,Z]]
+                X = S(p=Math.PI*2/cl*(j+1)) * ls1
+                Y = (1/rw*(i+1)-.5)*ls2
+                Z = C(p) * ls1
+                b = [...b, [X,Y,Z]]
+                X = S(p=Math.PI*2/cl*j) * ls1
+                Y = (1/rw*(i+1)-.5)*ls2
+                Z = C(p) * ls1
+                b = [...b, [X,Y,Z]]
+                a = [...a, b]
+              }
+            }
+            b = []
+            for(let j=cl;j--;){
+              X = S(p=Math.PI*2/cl*j) * ls1
+              Y = ls2/2
+              Z = C(p) * ls1
+              b = [...b, [X,Y,Z]]
+            }
+            //a = [...a, b]
+            return a
+          }
+
+          stroke = (scol, fcol, lwo=1, od=true, oga=1) => {
+            if(scol){
+              x.closePath()
+              if(od) x.globalAlpha = .2*oga
+              x.strokeStyle = scol
+              x.lineWidth = Math.min(1000,100*lwo/Z)
+              if(od) x.stroke()
+              x.lineWidth /= 4
+              x.globalAlpha = 1*oga
+              x.stroke()
+            }
+            if(fcol){
+              x.globalAlpha = 1*oga
+              x.fillStyle = fcol
+              x.fill()
+            }
+          }
+
+          ls = 1
+          base_cyl = Cylinder(1,20,ls*2,ls).map(v=>{
+            v.map(q=>{
+              X = q[0]
+              Y = q[1]
+              Z = q[2]
+              R(Math.PI/2,0,0)
+              q[0] = X
+              q[1] = Y
+              q[2] = Z
+            })
+            return v
+          })
+          
+          counter = []
+          for(m=6;m--;) counter = [...counter, JSON.parse(JSON.stringify(base_cyl)).map(v => {
+            v.map(q=>{
+              X = q[0]
+              Y = q[1]
+              Z = q[2]
+              q[0]  += (-3 + m +.5) * ls
+            })
+            return v
+          })]
+          
+          glyphs = '0123456789'
+          buffer = document.createElement('canvas')
+          bctx = buffer.getContext('2d')
+          fs=50
+          buffer.width = fs
+          buffer.height = fs*glyphs.length
+          bctx.font =  + fs+'px courier'
+          bctx.fillStyle = '#000'
+          bctx.fillRect(0,0,buffer.width,buffer.height)
+          bctx.fillStyle = '#fff'
+          glyphs.split('').map((glyph, idx) => bctx.fillText(glyph, 0, fs/1.33 + idx*fs))
+          spritemap = bctx.getImageData(0,0,buffer.width,buffer.height)
+          curps = Array(6).fill(0)
+        }
+        
+        oX=0, oY=0, oZ=6
+        Rl=0, Pt=0, Yw=0
+        x.fillStyle = '#0008'
+        x.fillRect(0,0,c.width,c.height)
+        
+        for(m=2;m--;){
+          for(j=2;j--;){
+            x.beginPath()
+            X = (-1+m+.5)*2
+            Y = (-1+j+.5)*.5
+            Z = -2
+            R(Rl,Pt,Yw,1)
+            s = Math.min(100,Math.max(50,(.85-C(t*10))*100))/Z
+            x.arc(...Q(),s,0,7)
+            x.fillStyle = '#fffa'
+            x.fill()
+          }
+        }
+        
+        if(0)counter.map(cyl=>{
+          cyl.map(v=>{
+            x.beginPath()
+            v.map(q=>{
+              X = q[0]
+              Y = q[1]
+              Z = q[2]
+              R(Rl,Pt,Yw,1)
+              if(Z>0) x.lineTo(...Q())
+            })
+            stroke('#f001', '#f001', 1, false)
+          })
+        })
+        
+        l_ = spritemap.data
+        sp = .01
+        h = fs*glyphs.length
+        
+        if(!((t*60|0)%60)){
+          if(seconds>0) {
+            seconds--
+          }else{
+            if(minutes>0){
+              minutes--
+              seconds+=59
+            }else{
+              if(hours>0){
+                hours--
+                minutes+=59
+              }
+            }
+          }
+        }
+        
+        hours_ = hours
+        minutes_ = minutes
+        seconds_ = seconds
+        if((hours+'').length<2) hours_ = '0' + hours
+        if((minutes+'').length<2) minutes_ = '0' + minutes
+        if((seconds+'').length<2) seconds_ = '0' + seconds
+        timestring = hours_ + minutes_ + seconds_
+        
+        homing = 6
+        for(k=0;k<6;k++){
+          curdig = curps[k] += (timestring[k] - curps[k]) / homing
+          incsp = 0
+          if(k>1)incsp++
+          if(k>3)incsp++
+          pos = k
+          for(i=0;i<l_.length;i+=4){
+            red   = l_[i+0]
+            green = l_[i+1]
+            blue  = l_[i+2]
+            alpha = l_[i+3]
+            lum = (red+green+blue)/3
+            if(lum>128){
+              j = i/4|0
+              j2 = j / fs | 0
+              p = -Math.PI*2/h*j2
+              X = (-fs/2+(j % fs)+fs/6)*sp*3 -sp*233 + sp*450/6*(pos+incsp/1.5)
+              Y = S(p)*2
+              Z = C(p)*2
+              R(0,Math.PI+.275+Math.PI/5*curps[k],0)
+              if(Z<-1.8){
+                R(Rl,Pt,Yw,1)
+                if(Z>0){
+                  x.fillStyle = k==5?`hsla(${t*15000},99%,50%,.5)`:'#fff6'
+                  l = Q()
+                  s = 15
+                  x.fillRect(l[0]-s/2,l[1]-s/2,s,s)
+                  s/=3
+                  x.fillStyle = k==5?``:'#fff'
+                  x.fillRect(l[0]-s/2,l[1]-s/2,s,s)
+                }
+              }
+            }
+          }
+        }
+        
+        x.beginPath()
+        X = -10,Y = -10, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        X = 10, Y = -10, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        X = 10, Y = -.5, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        X = -10, Y = -.5, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        stroke('','#000')
+
+        x.beginPath()
+        X = -10,Y = 10, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        X = 10, Y = 10, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        X = 10, Y = .5, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        X = -10, Y = .5, Z = -2
+        R(Rl,Pt,Yw,1)
+        if(Z>0)x.lineTo(...Q())
+        stroke('','#000')
+
+        t+=1/60
+        requestAnimationFrame(Draw)
+      }
+      Draw()
+     </script>
+  </body>
+</html>
